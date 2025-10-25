@@ -6,7 +6,7 @@
     <title>SHADOW - Assistant IA</title>
     <meta name="description" content="SHADOW - Votre assistant IA puissant avec recherche web et réponses intelligentes">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
         * {
             margin: 0;
@@ -175,7 +175,7 @@
         
         input:focus {
             border-color: hsl(0, 84%, 60%);
-            box-shadow: 0 0 0 3px hsl(0, 84%, 60% / 0.1);
+            box-shadow: 0 0 0 3px hsla(0, 84%, 60%, 0.1);
         }
         
         button {
@@ -340,13 +340,15 @@
         }
         
         .error-message {
-            background: hsl(0, 84%, 15%);
+            background: hsla(0, 84%, 15%, 0.9);
             border: 1px solid hsl(0, 84%, 30%);
-            padding: 1rem;
+            padding: 0.75rem;
             border-radius: 0.75rem;
-            margin: 1rem;
+            margin: 0.5rem 1rem;
             color: hsl(0, 84%, 80%);
+            font-size: 0.875rem;
             animation: slideIn 0.3s ease-out;
+            max-width: 90%;
         }
 
         /* Style pour le bouton du menu */
@@ -403,7 +405,7 @@
             transform: translateY(-7px) rotate(-45deg); 
         }
 
-        /* --- STYLES DU NOUVEAU MENU LATÉRAL (Side Menu) --- */
+        /* --- STYLES DU NOUVEAU MENU LATÉRAL --- */
 
         /* Overlay pour fermer le menu au clic extérieur */
         .menu-overlay {
@@ -433,7 +435,6 @@
             width: 18rem; /* Largeur pour desktop/tablet */
             max-width: 85vw; /* Assure la responsivité sur mobile */
             z-index: 101;
-            /* TRANSPARENCE ACCRUE: 0.9 -> 0.7 */
             background: hsla(0, 0%, 6%, 0.7); 
             border-right: 1px solid hsl(0, 40%, 15%);
             backdrop-filter: blur(20px); 
@@ -470,6 +471,9 @@
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            /* Permet le scroll si trop d'éléments (ex: playlist longue) */
+            overflow-y: auto; 
+            padding-right: 0.5rem; /* Espace pour la scrollbar */
         }
         
         /* Conteneur d'informations dynamiques */
@@ -525,6 +529,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            flex-shrink: 0;
         }
 
         .new-chat-btn {
@@ -558,8 +563,77 @@
             opacity: 0.8;
             font-weight: 500;
         }
-        /* --- FIN STYLES DU NOUVEAU MENU LATÉRAL --- */
+        
+        /* --- STYLES PLAYLIST --- */
+        
+        /* Style pour les boutons de contrôle du lecteur */
+        .control-btn:hover:not(:disabled) {
+            color: hsl(0, 84%, 60%) !important;
+            transform: scale(1.1);
+        }
 
+        #playlistList {
+            list-style: none; 
+            padding: 0; 
+            margin: 0;
+        }
+        
+        #playlistList li {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            background: hsla(0, 0%, 15%, 0.5);
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #playlistList li:hover {
+            background: hsla(0, 0%, 20%, 0.7);
+        }
+
+        #playlistList li.playing {
+            background: hsla(0, 84%, 60%, 0.2);
+            border-left: 3px solid hsl(0, 84%, 60%);
+            font-weight: 600;
+        }
+        
+        #playlistList .track-title {
+            max-width: 80%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .remove-track-btn {
+            background: none;
+            border: none;
+            color: hsl(0, 0%, 60%);
+            width: 1.5rem;
+            height: 1.5rem;
+            padding: 0;
+            transition: color 0.2s;
+        }
+
+        .remove-track-btn:hover {
+            color: hsl(0, 70%, 50%);
+            transform: scale(1.1);
+        }
+        
+        /* Masquer le player iframe pour l'audio seulement */
+        #youtube-player {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            overflow: hidden !important;
+        }
+
+        /* --- FIN STYLES PLAYLIST --- */
+        
     </style>
 </head>
 <body>
@@ -586,7 +660,56 @@
                 </p>
             </div>
             
-            <!-- Autres options de menu ici... -->
+            <!-- NOUVEAU : Lecteur de musique YouTube -->
+            <div class="dynamic-info-card" id="musicPlayerCard">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: hsl(0, 0%, 98%);">Playlist SHADOW</h3>
+                    <!-- Bouton Plus/Moins -->
+                    <button id="addLinkBtn" class="menu-button" style="background: hsla(0, 84%, 60%, 0.1); color: hsl(0, 84%, 60%); width: 2.2rem; height: 2.2rem; border-radius: 50%; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s;"><path d="M12 5v14m7-7H5"/></svg>
+                    </button>
+                </div>
+
+                <!-- Interface d'ajout de lien (initialement masquée) -->
+                <div id="linkInputArea" style="display: none; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px dashed hsla(0, 0%, 50%, 0.3); border-radius: 0.5rem;">
+                    <input type="text" id="youtubeLinkInput" placeholder="Coller le lien YouTube (URL ou ID)..." style="height: 2rem; background: hsl(0, 0%, 15%); border: 1px solid hsl(0, 0%, 30%); font-size: 0.75rem; padding: 0 0.5rem;" />
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="saveLinkBtn" style="flex: 1; height: 2rem; background: hsl(140, 60%, 40%); color: white; border-radius: 0.5rem; font-size: 0.75rem;">Ajouter</button>
+                        <button id="clearPlaylistBtn" style="flex: 1; height: 2rem; background: hsl(0, 70%, 50%); color: white; border-radius: 0.5rem; font-size: 0.75rem;">Vider la liste</button>
+                    </div>
+                </div>
+
+                <!-- Liste des titres de la playlist -->
+                <ul id="playlistList" style="list-style: none; max-height: 10rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.25rem;">
+                    <li style="color: hsl(0, 0%, 60%); font-style: italic; font-size: 0.75rem; justify-content: center;">(Chargement...)</li>
+                </ul>
+
+                <!-- Panneau de contrôle du lecteur (initialement masqué) -->
+                <div id="musicControls" style="display: none; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid hsla(0, 40%, 15%, 0.5); flex-direction: column; align-items: center; justify-content: center;">
+                    <div id="currentTrackInfo" style="text-align: center; font-size: 0.75rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; margin-bottom: 0.5rem; height: 1.2rem;">
+                        <!-- Titre de la piste en cours -->
+                    </div>
+
+                    <div style="display: flex; gap: 1.5rem; align-items: center;">
+                        <!-- Précédent -->
+                        <button id="prevBtn" style="width: 2.5rem; height: 2.5rem; background: none; color: hsl(0, 0%, 70%); box-shadow: none; transition: color 0.2s;" class="control-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                        </button>
+
+                        <!-- Play/Pause -->
+                        <button id="playPauseBtn" style="width: 3rem; height: 3rem; background: linear-gradient(45deg, hsl(0, 84%, 65%), hsl(0, 72%, 55%)); box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4); border-radius: 50%;" class="control-btn">
+                            <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg id="pauseIcon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        </button>
+
+                        <!-- Suivant -->
+                        <button id="nextBtn" style="width: 2.5rem; height: 2.5rem; background: none; color: hsl(0, 0%, 70%); box-shadow: none; transition: color 0.2s;" class="control-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- FIN NOUVEAU LECTEUR -->
 
         </div>
 
@@ -652,20 +775,79 @@
         </div>
     </div>
 
+    <!-- Conteneur caché pour le lecteur YouTube Iframe -->
+    <div id="youtube-player" style="display: none;"></div>
+
+    <!-- Script de l'API YouTube IFrame Player -->
     <script>
-        // Protection anti-copie : blocage du clic droit
-        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        // Charge le script de l'API IFrame Player de manière asynchrone
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Protection anti-inspection : blocage des raccourcis clavier
-        document.addEventListener('keydown', (e) => {
-            // Bloquer F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+Shift+C
-            if (e.key === 'F12' || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
-                (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'))) {
-                e.preventDefault();
-                return false;
+        // ----------------------------------------------------------------------
+        // 1. CONFIGURATION ET INITIALISATION GLOBALES
+        // ----------------------------------------------------------------------
+        
+        // Configuration Firebase (Variables globales fournies par l'environnement)
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth;
+        let userId = 'default-user'; // ID utilisateur par défaut avant authentification
+        let isAuthReady = false;
+
+        async function initFirebase() {
+            try {
+                // setLogLevel('Debug'); // Décommenter pour débogage Firebase
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authentification
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Attendre l'état d'authentification et définir l'ID utilisateur
+                await new Promise(resolve => {
+                    const unsubscribe = onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                        } else {
+                            // Si l'authentification anonyme échoue, utiliser un ID temporaire
+                            userId = crypto.randomUUID();
+                        }
+                        isAuthReady = true;
+                        unsubscribe(); // Arrêter l'écoute après la première vérification
+                        resolve();
+                    });
+                });
+                
+                console.log("Firebase initialisé. User ID:", userId);
+                // Charger la playlist une fois l'authentification prête
+                loadPlaylist(); 
+                
+            } catch (e) {
+                console.error("FIREBASE ERROR:", e);
+                showError('Erreur d\'initialisation Firebase. Les fonctionnalités de persistance sont désactivées.');
             }
-        });
+        }
+
+        // ----------------------------------------------------------------------
+        // 2. LOGIQUE CHAT (EXISTANTE)
+        // ----------------------------------------------------------------------
 
         const CHAT_URL = 'https://cyhzbmdwzxosdnxquxzq.supabase.co/functions/v1/chat';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5aHpibWR3enhvc2RueHF1eHpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwODcwODMsImV4cCI6MjA3NjY2MzA4M30.P9-129t4lomZ860tHCCnuBohd54T5dwNdpCxFggQCsU';
@@ -681,13 +863,15 @@
         // ÉLÉMENTS DU MENU LATÉRAL
         const sideMenu = document.getElementById('sideMenu');
         const menuOverlay = document.getElementById('menuOverlay');
-        const timeDisplayElement = document.getElementById('timeDisplay'); // NOUVEAU
+        const timeDisplayElement = document.getElementById('timeDisplay'); 
         const batteryStatusElement = document.getElementById('batteryStatus');
         const newChatBtn = document.getElementById('newChatBtn');
         
         let conversationMessages = [];
         let isProcessing = false;
         
+        // ... (fonctions formatTime, createMessageElement, addMessage, scrollToBottom, showTypingIndicator, removeTypingIndicator, showError restent inchangées) ...
+
         function formatTime(date) {
             return new Intl.DateTimeFormat('fr-FR', {
                 hour: '2-digit',
@@ -709,7 +893,6 @@
             
             const bubble = document.createElement('div');
             bubble.className = `message-bubble ${isUser ? 'message-bubble-user' : 'message-bubble-ai'}`;
-            // IMPORTANT: Utiliser innerHTML pour supporter le formatage Markdown (si l'API IA le renvoie)
             bubble.innerHTML = content;
             
             const time = document.createElement('span');
@@ -720,7 +903,6 @@
             contentDiv.appendChild(bubble);
             contentDiv.appendChild(time);
             
-            // Ordre correct des éléments (pour alignement)
             if (!isUser) messageDiv.appendChild(avatar);
             messageDiv.appendChild(contentDiv);
             if (isUser) messageDiv.appendChild(avatar);
@@ -796,7 +978,7 @@
             // Garder l'erreur un peu plus longtemps pour qu'elle soit visible
             setTimeout(() => errorDiv.remove(), 7000); 
         }
-        
+
         async function sendMessage() {
             const message = userInput.value.trim();
             if (!message || isProcessing) return;
@@ -804,7 +986,6 @@
             isProcessing = true;
             sendBtn.disabled = true;
             
-            // Ajouter le message utilisateur à la conversation
             const userMessage = { role: 'user', content: message };
             addMessage('user', message);
             userInput.value = '';
@@ -816,7 +997,6 @@
             let assistantBubble = null;
             
             try {
-                // Pour éviter le dépassement de limite de jetons (token limit), on n'envoie que les 5 derniers messages + le nouveau message utilisateur
                 const historyToSend = conversationMessages.slice(conversationMessages.length > 5 ? conversationMessages.length - 5 : 0);
                 
                 const response = await fetch(CHAT_URL, {
@@ -845,7 +1025,6 @@
                 const decoder = new TextDecoder();
                 let buffer = '';
                 
-                // --- Début du traitement du streaming ---
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -864,7 +1043,6 @@
                         
                         try {
                             const parsed = JSON.parse(jsonStr);
-                            // Cible la structure de réponse du streaming Gemini
                             const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text ||
                                             parsed.choices?.[0]?.delta?.content; 
                             
@@ -877,21 +1055,17 @@
                                     assistantBubble = elements.bubble;
                                     messagesContainer.appendChild(assistantMessageDiv);
                                 } else {
-                                    // Utiliser innerHTML pour le streaming afin de supporter le formatage
                                     assistantBubble.innerHTML = assistantContent; 
                                 }
                                 
                                 scrollToBottom();
                             }
                         } catch (e) {
-                            // Erreur de parsing d'une seule ligne, on ignore et on continue
                             console.error('Erreur parsing JSON (ligne ignorée):', e, jsonStr);
                         }
                     }
                 }
-                // --- Fin du traitement du streaming ---
                 
-                // Traiter le buffer restant après la boucle
                 if (buffer.trim()) {
                     const lines = buffer.split('\n');
                     for (const line of lines) {
@@ -916,7 +1090,6 @@
                     }
                 }
                 
-                // Ajouter le message complet de l'assistant à l'historique de conversation
                 if (assistantContent) {
                     conversationMessages.push({ 
                         role: 'assistant', 
@@ -929,7 +1102,6 @@
                 console.error('Erreur chat:', error);
                 removeTypingIndicator();
                 showError(error.message || 'Impossible de contacter l\'IA. Vérifiez la console pour les détails.');
-                // Retirer le dernier message utilisateur s'il y a eu une erreur de l'IA
                 if(conversationMessages.length > 0 && conversationMessages[conversationMessages.length - 1].role === 'user') {
                     conversationMessages.pop();
                 }
@@ -940,29 +1112,28 @@
             }
         }
         
-        // --- FONCTIONS DU MENU LATÉRAL ---
+        // ----------------------------------------------------------------------
+        // 3. FONCTIONS UTILITAIRES DE L'INTERFACE
+        // ----------------------------------------------------------------------
         
         function toggleMenu(show) {
-            // Détermine si le menu doit être ouvert ou fermé
             const isCurrentlyOpen = sideMenu.classList.contains('open');
             const shouldOpen = typeof show === 'boolean' ? show : !isCurrentlyOpen;
 
             if (shouldOpen) {
                 sideMenu.classList.add('open');
                 menuOverlay.classList.add('open');
-                menuIcon.classList.add('open'); // Ajoute la classe pour l'animation en croix
-                // Empêche le défilement du body quand le menu est ouvert
+                menuIcon.classList.add('open'); 
                 document.body.style.overflow = 'hidden'; 
             } else {
                 sideMenu.classList.remove('open');
                 menuOverlay.classList.remove('open');
-                menuIcon.classList.remove('open'); // Retire la classe pour revenir aux barres
+                menuIcon.classList.remove('open'); 
                 document.body.style.overflow = '';
             }
         }
         
         function updateClockAndBattery() {
-            // 1. Horloge et Date (Style Premium)
             const now = new Date();
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
@@ -970,37 +1141,29 @@
             const formattedDate = now.toLocaleDateString('fr-FR', dateOptions);
             const formattedTime = now.toLocaleTimeString('fr-FR', timeOptions);
             
-            // Mise à jour de l'heure et de la date dans la structure séparée
             timeDisplayElement.innerHTML = `
                 <span class="current-time gradient-text">${formattedTime}</span>
                 <span class="current-date">${formattedDate}</span>
             `;
 
-            // 2. Statut de la Batterie
             if ('getBattery' in navigator) {
                 navigator.getBattery().then(function(battery) {
                     function updateBatteryInfo() {
                         const level = Math.round(battery.level * 100);
                         const charging = battery.charging;
                         
-                        let icon = '';
-                        // Icônes
-                        if (charging) {
-                            icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"></path><path d="M16 21H8"></path><path d="M12 21v-8"></path><path d="M9 13v-2"></path><path d="M15 13v-2"></path><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>';
-                        } else {
-                            icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>';
-                        }
+                        let icon = charging 
+                            ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"></path><path d="M16 21H8"></path><path d="M12 21v-8"></path><path d="M9 13v-2"></path><path d="M15 13v-2"></path><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>'
+                            : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>';
 
                         batteryStatusElement.innerHTML = `${icon} Batterie: ${level}% ${charging ? '<span class="gradient-text" style="font-weight: 700;">(En charge)</span>' : ''}`;
                     }
 
-                    // Mettre à jour immédiatement et ajouter des listeners pour le futur
                     updateBatteryInfo();
                     battery.addEventListener('levelchange', updateBatteryInfo);
                     battery.addEventListener('chargingchange', updateBatteryInfo);
                     
                 }).catch(e => {
-                    console.error('Erreur accès batterie:', e);
                     batteryStatusElement.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
                         Batterie: Non supporté
@@ -1015,41 +1178,393 @@
         }
         
         function handleNewChat() {
-            // 1. Vider les messages affichés
             messagesContainer.innerHTML = '';
-            
-            // 2. Vider l'historique de la conversation
             conversationMessages = [];
-            
-            // 3. Afficher l'écran de bienvenue
             welcomeScreen.style.display = 'flex';
             messagesContainer.style.display = 'none';
-            
-            // 4. Fermer le menu
             toggleMenu(false);
-            
             console.log("Nouveau chat démarré. Conversation réinitialisée.");
             userInput.focus();
         }
-        // --- FIN FONCTIONS DU MENU LATÉRAL ---
+        
+        // ----------------------------------------------------------------------
+        // 4. LOGIQUE DU LECTEUR DE MUSIQUE (YOUTUBE + FIREBASE)
+        // ----------------------------------------------------------------------
 
-        // Listeners
+        // DOM Elements pour le Player
+        const playlistListElement = document.getElementById('playlistList');
+        const addLinkBtn = document.getElementById('addLinkBtn');
+        const linkInputArea = document.getElementById('linkInputArea');
+        const youtubeLinkInput = document.getElementById('youtubeLinkInput');
+        const saveLinkBtn = document.getElementById('saveLinkBtn');
+        const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+        const musicControls = document.getElementById('musicControls');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const nextBtn = document.getElementById('nextBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const currentTrackInfo = document.getElementById('currentTrackInfo');
+
+        let player;
+        let playlist = []; // Array of { id: string, title: string }
+        let currentTrackIndex = -1;
+        let isPlayerReady = false;
+
+        // Cette fonction est appelée par le script de l'API YouTube (Doit être globale)
+        window.onYouTubeIframeAPIReady = function() {
+            const playerHost = document.getElementById('youtube-player');
+            player = new YT.Player('youtube-player', {
+                height: '1',
+                width: '1',
+                videoId: '', 
+                playerVars: {
+                    'playsinline': 1,
+                    'autoplay': 0,
+                    'controls': 0,
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+        
+        function onPlayerReady(event) {
+            isPlayerReady = true;
+            console.log("YouTube Player est prêt.");
+            if (playlist.length > 0) {
+                currentTrackIndex = 0;
+                musicControls.style.display = 'flex';
+                renderPlaylist(); 
+            }
+        }
+        
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+
+            if (event.data === YT.PlayerState.ENDED) {
+                playNextTrack();
+            }
+        }
+        
+        function getPlaylistDocRef() {
+            // Chemin de la collection privée: /artifacts/{appId}/users/{userId}/playlists
+            return doc(db, `artifacts/${appId}/users/${userId}/playlists`, 'youtube-playlist');
+        }
+
+        async function savePlaylist() {
+            if (!isAuthReady) {
+                console.warn("Firebase non prêt. Sauvegarde de la playlist ignorée.");
+                return;
+            }
+            try {
+                const docRef = getPlaylistDocRef();
+                await setDoc(docRef, { list: playlist, lastUpdated: new Date() });
+            } catch (e) {
+                console.error("Erreur de sauvegarde de la playlist:", e);
+                showError("Erreur de sauvegarde de la playlist.");
+            }
+        }
+
+        function loadPlaylist() {
+            if (!isAuthReady) {
+                 // Si auth n'est pas prêt, réessayer plus tard.
+                setTimeout(loadPlaylist, 500); 
+                return;
+            }
+            
+            const docRef = getPlaylistDocRef();
+
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().list) {
+                    const data = docSnap.data();
+                    const newPlaylist = data.list || [];
+                    
+                    // Mise à jour uniquement si la liste a changé
+                    if (JSON.stringify(playlist) !== JSON.stringify(newPlaylist)) {
+                        playlist = newPlaylist;
+                        
+                        if (playlist.length === 0) {
+                            if (player && player.stopVideo) player.stopVideo();
+                            musicControls.style.display = 'none';
+                            currentTrackIndex = -1;
+                        } else if (currentTrackIndex === -1 && isPlayerReady) {
+                             currentTrackIndex = 0;
+                             musicControls.style.display = 'flex';
+                        }
+                        renderPlaylist();
+                    }
+                } else {
+                    playlist = [];
+                    renderPlaylist();
+                }
+            }, (error) => {
+                console.error("Erreur de lecture de la playlist en temps réel:", error);
+                showError("Erreur de chargement de la playlist.");
+            });
+        }
+
+        // Récupère le titre de la vidéo YT via oEmbed (nécessite un proxy CORS)
+        async function fetchVideoTitle(videoId) {
+            if (!videoId) return "Titre inconnu";
+            const proxyUrl = 'https://corsproxy.io/?'; 
+            const youtubeApiUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+
+            try {
+                // Utilisation du proxy CORS
+                const response = await fetch(proxyUrl + encodeURIComponent(youtubeApiUrl));
+                if (!response.ok) throw new Error('Échec de la récupération du titre');
+                const data = await response.json();
+                return data.title || videoId;
+            } catch (e) {
+                return videoId;
+            }
+        }
+
+        // Extrait l'ID de la vidéo à partir de l'URL ou de l'ID brut
+        function extractVideoId(urlOrId) {
+            if (!urlOrId) return null;
+            if (urlOrId.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(urlOrId)) {
+                return urlOrId;
+            }
+            
+            const watchMatch = urlOrId.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})(?:.+)?/);
+            if (watchMatch) return watchMatch[1];
+            
+            return null;
+        }
+
+        async function addLink() {
+            const url = youtubeLinkInput.value.trim();
+            youtubeLinkInput.value = ''; 
+
+            if (!url) return;
+
+            const videoId = extractVideoId(url);
+
+            if (!videoId) {
+                showError("Lien YouTube invalide. Utilisez l'URL complète ou l'ID.");
+                return;
+            }
+            
+            if (playlist.some(track => track.id === videoId)) {
+                showError("Cette vidéo est déjà dans la playlist.");
+                return;
+            }
+
+            // Afficher le statut de chargement pendant la récupération du titre
+            playlistListElement.innerHTML = `
+                <li style="justify-content: center; opacity: 0.7;">
+                    <span class="gradient-text" style="animation: typingDot 1.6s infinite;">Chargement du titre...</span>
+                </li>
+            `;
+            
+            const title = await fetchVideoTitle(videoId);
+            
+            const newTrack = { id: videoId, title: title };
+            playlist.push(newTrack);
+            await savePlaylist();
+            
+            if (playlist.length === 1) {
+                currentTrackIndex = 0;
+                musicControls.style.display = 'flex';
+            }
+            
+            renderPlaylist();
+            linkInputArea.style.display = 'none';
+            addLinkBtn.querySelector('svg').style.transform = ''; 
+        }
+
+        function removeLink(index) {
+            if (index === currentTrackIndex) {
+                if (player && player.stopVideo) player.stopVideo();
+                currentTrackIndex = -1;
+            }
+            
+            playlist.splice(index, 1);
+            
+            // Ajuster l'index si la piste supprimée était avant celle en cours
+            if (index < currentTrackIndex) {
+                currentTrackIndex--;
+            } else if (playlist.length === 0) {
+                musicControls.style.display = 'none';
+                currentTrackIndex = -1;
+            } else if (currentTrackIndex === -1 && playlist.length > 0) {
+                 // Si le lecteur était à l'arrêt, initialiser l'index
+                 currentTrackIndex = 0;
+            }
+
+            savePlaylist();
+            renderPlaylist();
+        }
+
+        function clearPlaylist() {
+            if (player && player.stopVideo) player.stopVideo();
+            playlist = [];
+            currentTrackIndex = -1;
+            savePlaylist();
+            renderPlaylist();
+            musicControls.style.display = 'none';
+            linkInputArea.style.display = 'none';
+            addLinkBtn.querySelector('svg').style.transform = '';
+            showError("La playlist a été vidée.");
+        }
+
+        function renderPlaylist() {
+            playlistListElement.innerHTML = ''; 
+            
+            if (playlist.length === 0) {
+                playlistListElement.innerHTML = '<li style="color: hsl(0, 0%, 60%); font-style: italic; font-size: 0.75rem; justify-content: center;">(Liste vide)</li>';
+                currentTrackInfo.innerHTML = '';
+                musicControls.style.display = 'none';
+                return;
+            }
+            
+            playlist.forEach((track, index) => {
+                const li = document.createElement('li');
+                li.classList.add('playlist-item');
+                li.dataset.index = index;
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'track-title';
+                titleSpan.textContent = track.title;
+                
+                if (index === currentTrackIndex) {
+                    li.classList.add('playing');
+                    currentTrackInfo.innerHTML = `Piste: <span class="gradient-text">${track.title}</span>`;
+                    titleSpan.innerHTML = '<span class="gradient-text">▶</span> ' + track.title;
+                }
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-track-btn';
+                removeBtn.setAttribute('aria-label', `Retirer ${track.title}`);
+                removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    removeLink(index);
+                });
+
+                li.appendChild(titleSpan);
+                li.appendChild(removeBtn);
+                
+                li.addEventListener('click', () => {
+                    playTrackByIndex(index);
+                });
+                
+                playlistListElement.appendChild(li);
+            });
+        }
+
+        function playTrackByIndex(index) {
+            if (index < 0 || index >= playlist.length || !isPlayerReady) return;
+            
+            currentTrackIndex = index;
+            const trackId = playlist[index].id;
+            
+            player.loadVideoById(trackId);
+            
+            musicControls.style.display = 'flex';
+            renderPlaylist();
+        }
+
+        function playPause() {
+            if (!player || playlist.length === 0) {
+                 showError("Playlist vide ou lecteur non initialisé.");
+                 return;
+            }
+
+            if (currentTrackIndex === -1) {
+                currentTrackIndex = 0;
+                playTrackByIndex(0);
+                return;
+            }
+            
+            const state = player.getPlayerState();
+            
+            if (state === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+            } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED || state === YT.PlayerState.CUED) {
+                player.playVideo();
+            } else if (state === YT.PlayerState.UNSTARTED) {
+                playTrackByIndex(currentTrackIndex);
+            }
+        }
+
+        function playNextTrack() {
+            if (playlist.length === 0) return;
+            let nextIndex = (currentTrackIndex + 1) % playlist.length;
+            playTrackByIndex(nextIndex);
+        }
+
+        function playPrevTrack() {
+            if (playlist.length === 0) return;
+            let prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+            playTrackByIndex(prevIndex);
+        }
+        
+        // ----------------------------------------------------------------------
+        // 5. LISTENERS ET INITIALISATION
+        // ----------------------------------------------------------------------
+        
+        // Anti-copie et inspection (Fonctions existantes)
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+                (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'))) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Chat Listeners (Existants)
         sendBtn.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !isProcessing) {
-                e.preventDefault(); // Empêcher le retour à la ligne dans l'input
+                e.preventDefault(); 
                 sendMessage();
             }
         });
         
-        // --- Listeners pour le menu ---
+        // Menu Listeners (Existants)
         menuButton.addEventListener('click', () => toggleMenu(true));
         menuOverlay.addEventListener('click', () => toggleMenu(false));
         newChatBtn.addEventListener('click', handleNewChat);
         
-        // Initialisation et boucle de mise à jour (Horloge/Batterie)
+        // Lecteur Musique Listeners (Nouveaux)
+        addLinkBtn.addEventListener('click', () => {
+            const isVisible = linkInputArea.style.display !== 'none';
+            linkInputArea.style.display = isVisible ? 'none' : 'flex';
+            addLinkBtn.querySelector('svg').style.transform = isVisible ? '' : 'rotate(45deg)';
+            if (!isVisible) {
+                youtubeLinkInput.focus();
+            }
+        });
+
+        saveLinkBtn.addEventListener('click', addLink);
+        clearPlaylistBtn.addEventListener('click', clearPlaylist);
+        playPauseBtn.addEventListener('click', playPause);
+        nextBtn.addEventListener('click', playNextTrack);
+        prevBtn.addEventListener('click', playPrevTrack);
+
+        youtubeLinkInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addLink();
+            }
+        });
+
+        // Initialisation
+        initFirebase();
         updateClockAndBattery();
-        setInterval(updateClockAndBattery, 1000); // Met à jour l'horloge chaque seconde
+        setInterval(updateClockAndBattery, 1000); 
         
         userInput.focus();
     </script>
